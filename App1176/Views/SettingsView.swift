@@ -101,7 +101,7 @@ struct SettingsView: View {
                             CurrentSubscriptionView(screen: $screen)
                         } label: {
                             HStack {
-                                Image(systemName: "square.and.arrow.up")
+                                Image(systemName: "dollarsign.square")
                                     .font(.system(size: 20, weight: .semibold))
                                     .foregroundColor(.white)
                                 Text("Subscription details")
@@ -142,16 +142,15 @@ struct SettingsView: View {
                             .frame(height: 44)
                         }
                         
-                        
                         Rectangle()
                             .fill(Color.c606060)
                             .frame(height: 0.5)
                     }
                     .padding(.horizontal, 32)
                     .padding(.bottom, 16)
-                    .frame(maxHeight: .infinity)
-                    .background(Color.black)
                     .frame(maxHeight: .infinity, alignment: .top)
+                    .background(Color.black)
+                    
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
             }

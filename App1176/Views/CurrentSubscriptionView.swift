@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CurrentSubscriptionView: View {
+    @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
     @Environment(\.openURL) var openURL
     @EnvironmentObject var source: Source
     @Binding var screen: Screen
@@ -11,13 +12,34 @@ struct CurrentSubscriptionView: View {
             Color.black.ignoresSafeArea()
             Color.c606060.ignoresSafeArea()
             VStack(spacing: 0) {
-                Text("Subscription")
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(EdgeInsets(top: 3, leading: 16, bottom: 8, trailing: 16))
-                    .frame(height: 52)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 15) {
+                    Button {
+                        self.presentationMode.wrappedValue.dismiss()
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.white)
+                            
+                            Text("Back")
+                                .font(.system(size: 17, weight: .regular))
+                                .foregroundColor(.white)
+                        }
+                        .padding(EdgeInsets(top: 11, leading: 8, bottom: 11, trailing: 8))
+                    }
                     .background(Color.c606060)
+                    
+                    Text("Subscription")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(EdgeInsets(top: 3, leading: 16, bottom: 8, trailing: 16))
+                        .frame(height: 52)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.c606060)
+                }
+                .background(Color.c606060)
+                
+                
                 
                 ScrollView(.vertical) {
                     VStack(spacing: 0) {

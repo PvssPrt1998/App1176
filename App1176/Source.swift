@@ -211,7 +211,10 @@ final class Source: ObservableObject {//luma-82fc55d1-8727-426e-9a43-823f8e25583
                     violateContent()
                 }
             } else {
-                self.saveVideo(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                DispatchQueue.main.async {
+                    self.saveVideo(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                }
+                
                 print("VideoSaved")
                 print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
                 completion(response)

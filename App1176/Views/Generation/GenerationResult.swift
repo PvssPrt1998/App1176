@@ -41,7 +41,7 @@ struct GenerationResult: View {
                 } else if loadingState == .violateContent {
                     //
                 } else {
-                    VideoLoadingView(state: loadingState, value: 0.01) {
+                    VideoLoadingView(isNotStroke: false, state: loadingState, value: 0.01) {
                         if !source.requestInProgress {
                             loadingState = .loading
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {

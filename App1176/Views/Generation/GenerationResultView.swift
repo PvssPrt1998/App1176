@@ -61,7 +61,7 @@ struct GenerationResultView: View {
                         }
                     }
                     Button {
-
+                        
                     } label: {
                         HStack {
                             Image(systemName: "square.and.arrow.up")
