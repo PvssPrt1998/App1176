@@ -10,6 +10,7 @@ struct CustomSubscriptionView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             Color.c606060.ignoresSafeArea()
+            Color.black.ignoresSafeArea(.container, edges: .bottom)
             VStack(spacing: 0) {
                 Text("Subscription")
                     .font(.system(size: 34, weight: .bold))

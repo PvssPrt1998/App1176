@@ -14,11 +14,11 @@ struct SubscriptionButtons: View {
     
     private var subscriptionButtonsTextYearly: some View {
         HStack {
-            Text(source.returnName(product: source.productsApphud[0]))
+            Text(source.returnName(product: source.productsApphud[1]))
                 .font(.system(size: 20, weight: .regular))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text("For only " + source.returnPrice(product: source.productsApphud[0]) + " " + source.returnPriceSign(product: source.productsApphud[0]))
+            Text("For only " + source.returnPrice(product: source.productsApphud[1]) + " " + source.returnPriceSign(product: source.productsApphud[1]))
                 .font(.system(size: 15, weight: .regular))
                 .foregroundColor(.white)
         }
@@ -30,10 +30,17 @@ struct SubscriptionButtons: View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(isYear ? Color.c2547413 : Color.c153153153, lineWidth: 2)
         )
+        .overlay(
+            Text("Unlimited use of generations for one year")
+                .font(.system(size: 12, weight: .regular))
+                .foregroundColor(.c153153153)
+                .padding(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 16))
+            ,alignment: .bottomTrailing
+        )
         .onTapGesture {
             isYear = true
         }
-        .frame(height: 71)
+        .frame(height: 81)
         .overlay(
             Text("Most Popular")
                 .font(.system(size: 15, weight: .regular))
@@ -51,11 +58,11 @@ struct SubscriptionButtons: View {
     
     private var subscriptionButtonsTextWeekly: some View {
         HStack {
-            Text(source.returnName(product: source.productsApphud[1]))
+            Text(source.returnName(product: source.productsApphud[0]))
                 .font(.system(size: 20, weight: .regular))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text("For only " + source.returnPrice(product: source.productsApphud[1]) + " " + source.returnPriceSign(product: source.productsApphud[1]))
+            Text("For only " + source.returnPrice(product: source.productsApphud[0]) + " " + source.returnPriceSign(product: source.productsApphud[0]))
                 .font(.system(size: 15, weight: .regular))
                 .foregroundColor(.white)
         }
@@ -66,6 +73,13 @@ struct SubscriptionButtons: View {
         .overlay(
             RoundedRectangle(cornerRadius: 10)
                 .stroke(!isYear ? Color.c2547413 : Color.c153153153, lineWidth: 2)
+        )
+        .overlay(
+            Text("Unlimited use of generations for one week")
+                .font(.system(size: 12, weight: .regular))
+                .foregroundColor(.c153153153)
+                .padding(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 16))
+            ,alignment: .bottomTrailing
         )
         .onTapGesture {
             isYear = false
