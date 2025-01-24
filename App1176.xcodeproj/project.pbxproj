@@ -570,7 +570,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App1176/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Sora&Hug: AI Video Generator";
+				INFOPLIST_KEY_CFBundleDisplayName = "Hug video generator";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to the photo library to allow you to save video";
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "Your data will be used to deliver personalized ads to you";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -611,7 +611,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App1176/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Sora&Hug: AI Video Generator";
+				INFOPLIST_KEY_CFBundleDisplayName = "Hug video generator";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to the photo library to allow you to save video";
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "Your data will be used to deliver personalized ads to you";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
