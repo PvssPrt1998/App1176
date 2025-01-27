@@ -98,7 +98,7 @@ struct CustomSubscriptionView: View {
                         .padding(.top, 10)
                         
                         Button {
-                            source.startPurchase(product: isYear ? source.productsApphud[0] : source.productsApphud[1]) { bool in
+                            source.startPurchase(product: isYear ? source.productsApphud[1] : source.productsApphud[0]) { bool in
                                 if bool {
                                     print("Subscription purchased")
                                     screen = .main
