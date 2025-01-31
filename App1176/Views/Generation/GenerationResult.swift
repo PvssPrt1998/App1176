@@ -144,12 +144,24 @@ struct GenerationResult: View {
     
     private func request() {
         if source.videoStartFrame == nil && source.videoEndFrame == nil {
-            source.postRequestText(source.videoGenerationText, aspectRatio: source.aspectRatio, style: source.style) {
+            textRequest()
+        } else if source.videoStartFrame != nil && source.videoEndFrame == nil {
+            startFrameRequest()
+        } else if source.videoStartFrame == nil && source.videoEndFrame != nil {
+            endFrameRequest()
+        } else {
+            startAndEndFrameRequest()
+        }
+    }
+    
+    private func startFrameRequest() {
+        print("StartFrameRequest in view")
+        source.imageToUrl(imageData: source.videoStartFrame) { url in
+            source.postRequestTextWithStartFrame(source.videoGenerationText, urlStr: url.absoluteString, aspectRatio: source.aspectRatio, style: source.style) {
                 loadingState = .noConnection
             } violateContent: {
-                loadingState = .violateContent
+                loadingState = .noConnection
             } completion: { response in
-                print("CompletionRequest")
                 if let response = response {
                     print("*****")
                     print("Response by id")
@@ -158,6 +170,76 @@ struct GenerationResult: View {
                     print("postRequest completion error cannot get response")
                     loadingState = .noConnection
                 }
+            }
+
+        } errorHandler: {
+            loadingState = .noConnection
+        }
+    }
+    
+    private func endFrameRequest() {
+        source.imageToUrl(imageData: source.videoStartFrame) { url in
+            source.postRequestTextWithEndFrame(source.videoGenerationText, urlStr: url.absoluteString, aspectRatio: source.aspectRatio, style: source.style) {
+                loadingState = .noConnection
+            } violateContent: {
+                loadingState = .noConnection
+            } completion: { response in
+                if let response = response {
+                    print("*****")
+                    print("Response by id")
+                    videoById(response.id)
+                } else {
+                    print("postRequest completion error cannot get response")
+                    loadingState = .noConnection
+                }
+            }
+        } errorHandler: {
+            loadingState = .noConnection
+        }
+    }
+    
+    private func startAndEndFrameRequest() {
+        source.imageToUrl(imageData: source.videoStartFrame) { url1 in
+            source.imageToUrl(imageData: source.videoEndFrame) { url2 in
+                source.postRequestTextWithEndFrameAndStartFrame(source.videoGenerationText, urlStr: url1.absoluteString, urlStr1: url2.absoluteString, aspectRatio: source.aspectRatio, style: source.style) {
+                    loadingState = .noConnection
+                } violateContent: {
+                    loadingState = .noConnection
+                } completion: { response in
+                    print("CompletionRequest")
+                    if let response = response {
+                        print("*****")
+                        print("Response by id")
+                        videoById(response.id)
+                    } else {
+                        print("postRequest completion error cannot get response")
+                        loadingState = .noConnection
+                    }
+                }
+            } errorHandler: {
+                loadingState = .noConnection
+            }
+
+        } errorHandler: {
+            loadingState = .noConnection
+        }
+
+    }
+    
+    private func textRequest() {
+        source.postRequestText(source.videoGenerationText, aspectRatio: source.aspectRatio, style: source.style) {
+            loadingState = .noConnection
+        } violateContent: {
+            loadingState = .violateContent
+        } completion: { response in
+            print("CompletionRequest")
+            if let response = response {
+                print("*****")
+                print("Response by id")
+                videoById(response.id)
+            } else {
+                print("postRequest completion error cannot get response")
+                loadingState = .noConnection
             }
         }
     }

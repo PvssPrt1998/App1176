@@ -6,3 +6,11 @@ struct Video: Hashable {
     var previewImageUrl: String
     let createdAt: String
 }
+
+struct ImageResponse: Codable {
+    let url: String
+    
+    enum CodingKeys: String, CodingKey {
+        case url
+    }
+}

@@ -27,6 +27,113 @@ final class Source: ObservableObject {//luma-82fc55d1-8727-426e-9a43-823f8e25583
         }
     }
     
+    func imageToUrl(imageData: Data?, completion: @escaping (URL) -> Void, errorHandler: @escaping () -> Void) {
+        guard let url = URL(string: "https://huggerapp.shop/api/upload"), let imageData = imageData, let uiImage = UIImage(data: imageData) else {
+            print("Invalid URL for generateEffect.")
+            errorHandler()
+            return
+        }
+        
+        let imageFilePath = save(image: uiImage)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+
+        if let imageFilePath = imageFilePath {
+            print(imageFilePath)
+            do {
+                let fileName = "image"
+                let imageData = try Data(contentsOf: URL(fileURLWithPath: imageFilePath))
+                body.append("--\(boundary)\r\n")
+                body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(fileName)\"\r\n")
+                body.append("Content-Type: image/jpeg\r\n\r\n")
+                body.append(imageData)
+                body.append("\r\n")
+            } catch {
+                errorHandler()
+                return
+            }
+        } else {
+            print("No image file provided.")
+            errorHandler()
+        }
+
+        body.append("--\(boundary)--\r\n")
+        request.httpBody = body
+
+        if let bodyString = String(data: body, encoding: .utf8) {
+            print("Request body:\n\(bodyString)")
+        }
+
+        if let bodySize = request.httpBody?.count {
+            print("HTTP Body size: \(bodySize) bytes")
+        }
+        
+        print("before task")
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            print("task stage 1")
+            if let error = error {
+                errorHandler()
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                errorHandler()
+                return
+            }
+            print(httpResponse)
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                errorHandler()
+                return
+            }
+
+            guard let data = data else {
+                errorHandler()
+                return
+            }
+
+            if let rawResponse = String(data: data, encoding: .utf8) {
+                print("Raw Response to generateEffect:\n\(rawResponse)")
+            } else {
+                print("Unable to parse raw response as string.")
+            }
+
+            do {
+                let response = try JSONDecoder().decode(ImageResponse.self, from: data)
+                if let url = URL(string: response.url) {
+                    completion(url)
+                } else {
+                    errorHandler()
+                }
+            } catch {
+                errorHandler()
+            }
+        }
+        task.resume()
+    }
+    
+    func save(image: UIImage) -> String? {
+        let fileName = UUID().uuidString + ".jpg"
+        let fileURL = documentsUrl.appendingPathComponent(fileName)
+        if let imageData = image.jpegData(compressionQuality: 1.0) {
+           try? imageData.write(to: fileURL, options: .atomic)
+            return fileURL.path // ----> Save fileName
+        }
+        print("Error saving image")
+        return nil
+    }
+
+    var documentsUrl: URL {
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    }
+    
     @MainActor func load(completion: @escaping (Bool) -> Void) {
         if let ids = try? dataManager.fetchVideoIds() {
             videoIds = ids
@@ -98,66 +205,276 @@ final class Source: ObservableObject {//luma-82fc55d1-8727-426e-9a43-823f8e25583
         videos[index].previewImageUrl = url
         dataManager.editVideo(videos[index])
     }
+    
+    //MARK: - postRequest startFrame and endFrame and text
+    func postRequestTextWithEndFrameAndStartFrame(_ text: String, urlStr: String, urlStr1: String, aspectRatio: String? = nil, style: String, errorHandler: @escaping () -> Void, violateContent: @escaping () -> Void, completion: @escaping (_ response: Response?) -> ()) {
+        var parameters: [String: Any] = [
+            "prompt": style + text
+        ]
+        let subParam: [String: Any] = [
+            "type" : "image",
+            "url" : urlStr
+        ]
+        parameters.updateValue(subParam, forKey: "frame0")
+        let subParam1: [String: Any] = [
+            "type" : "image",
+            "url" : urlStr1
+        ]
+        parameters.updateValue(subParam1, forKey: "frame1")
+        
+        if let aspectRatio = aspectRatio {
+            parameters.updateValue("aspect_ratio", forKey: aspectRatio)
+        }
+        guard let url =  URL(string: API.url) else { return }
 
-    func requestUrlByImage(_ imageData: Data) {
-        let imageTest = UIImage(named: "example1")!.jpegData(compressionQuality: 1)
-        guard let image = UIImage(data: imageData) else { return }
-        let url = URL(string: "https://huggerapp.shop/api/upload")
         let session = URLSession.shared
-        var urlRequest = URLRequest(url: url!)
-        urlRequest.httpMethod = "POST"
-        urlRequest.httpBody = imageTest
-        
-              let task = session.dataTask(with: urlRequest) { data, response, error in
-                  if let error = error {
-                      print("Post Request Error: \(error.localizedDescription)")
-                      return
-                  }
-        
-                // ensure there is valid response code returned from this HTTP response
-                guard let httpResponse = response as? HTTPURLResponse,
-                      (200...299).contains(httpResponse.statusCode)
-                else {
-                  print("Invalid Response received from the server")
-                  return
-                }
-        
-                // ensure there is data returned
-                guard let responseData = data else {
-                  print("nil Data received from the server")
-                  return
-                }
-                  print(responseData)
-                
-                do {
-                    let jsonResponse = try JSONSerialization.jsonObject(with: responseData)
-                    print(jsonResponse)
 
-                  // create json object from data or use JSONDecoder to convert to Model stuct
-                } catch let error {
-                  //print(error.localizedDescription)
-                    print("error: ", error)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type") // change as per server requirements
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        request.addValue("Bearer " + API.key, forHTTPHeaderField: "authorization")
+      do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted)
+      } catch let error {
+        print(error.localizedDescription)
+        return
+      }
+      // create dataTask using the session object to send data to the server
+      let task = session.dataTask(with: request) { data, response, error in
+          if let error = error {
+              print("Post Request Error: \(error.localizedDescription)")
+              errorHandler()
+              return
+          }
+        
+        // ensure there is valid response code returned from this HTTP response
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode)
+        else {
+          print("Invalid Response received from the server")
+            errorHandler()
+          return
+        }
+        
+        // ensure there is data returned
+        guard let responseData = data else {
+            errorHandler()
+          print("nil Data received from the server")
+          return
+        }
+        
+        do {
+            let jsonResponse = try JSONSerialization.jsonObject(with: responseData)
+            print(jsonResponse)
+            let response = try JSONDecoder().decode(Response.self, from: responseData)
+            print(response.id)
+            if let failureReason = response.failureReason {
+                if failureReason.count > 10 {
+                    violateContent()
                 }
-              }
-              // perform the task
-              task.resume()
+            } else {
+                DispatchQueue.main.async {
+                    self.saveVideo(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                }
+                
+                print("VideoSaved")
+                print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                completion(response)
+            }
+            
+        } catch let error {
+          //print(error.localizedDescription)
+            errorHandler()
+            print("error: ", error)
+        }
+      }
+      task.resume()
     }
     
-    func requestVideoByTextAndStartFrame() {
+    //MARK: - postRequest endFrame and text
+    func postRequestTextWithEndFrame(_ text: String, urlStr: String, aspectRatio: String? = nil, style: String, errorHandler: @escaping () -> Void, violateContent: @escaping () -> Void, completion: @escaping (_ response: Response?) -> ()) {
+        var parameters: [String: Any] = [
+            "prompt": style + text
+        ]
+        if let videoStartFrame = videoStartFrame {
+            let subParam: [String: Any] = [
+                "type" : "image",
+                "url" : urlStr
+            ]
+            parameters.updateValue(subParam, forKey: "frame1")
+        }
+        if let aspectRatio = aspectRatio {
+            parameters.updateValue("aspect_ratio", forKey: aspectRatio)
+        }
+        guard let url =  URL(string: API.url) else { return }
+
+        let session = URLSession.shared
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type") // change as per server requirements
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        request.addValue("Bearer " + API.key, forHTTPHeaderField: "authorization")
+      do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted)
+      } catch let error {
+        print(error.localizedDescription)
+        return
+      }
+      // create dataTask using the session object to send data to the server
+      let task = session.dataTask(with: request) { data, response, error in
+          if let error = error {
+              print("Post Request Error: \(error.localizedDescription)")
+              errorHandler()
+              return
+          }
         
+        // ensure there is valid response code returned from this HTTP response
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode)
+        else {
+          print("Invalid Response received from the server")
+            errorHandler()
+          return
+        }
+        
+        // ensure there is data returned
+        guard let responseData = data else {
+            errorHandler()
+          print("nil Data received from the server")
+          return
+        }
+        
+        do {
+            let jsonResponse = try JSONSerialization.jsonObject(with: responseData)
+            print(jsonResponse)
+            let response = try JSONDecoder().decode(Response.self, from: responseData)
+            print(response.id)
+            if let failureReason = response.failureReason {
+                if failureReason.count > 10 {
+                    violateContent()
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.saveVideo(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                }
+                
+                print("VideoSaved")
+                print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                completion(response)
+            }
+            
+        } catch let error {
+          //print(error.localizedDescription)
+            errorHandler()
+            print("error: ", error)
+        }
+      }
+      task.resume()
     }
     
-    func requestVideoByTextAndEndFrame() {
+    //MARK: - postRequest startImage and text
+    func postRequestTextWithStartFrame(_ text: String, urlStr: String, aspectRatio: String? = nil, style: String, errorHandler: @escaping () -> Void, violateContent: @escaping () -> Void, completion: @escaping (_ response: Response?) -> ()) {
+        print("Post request startFrame")
+        var parameters: [String: Any] = [
+            "prompt": style + text,
+            "frame0" : [
+                "type" : "image",
+                "url" : urlStr
+            ]
+        ]
         
-    }
-    
-    func requestVideoByTextAndFrames() {
+        if let aspectRatio = aspectRatio {
+            parameters.updateValue("aspect_ratio", forKey: aspectRatio)
+        }
         
+        print(parameters)
+        guard let url =  URL(string: API.url) else { return }
+
+        let session = URLSession.shared
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type") // change as per server requirements
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        request.addValue("Keep-Alive", forHTTPHeaderField: "connection")
+        request.addValue("Bearer " + API.key, forHTTPHeaderField: "authorization")
+      do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted)
+          print("***************")
+          print(request.httpBody)
+      } catch let error {
+        print(error.localizedDescription)
+        return
+      }
+      // create dataTask using the session object to send data to the server
+      let task = session.dataTask(with: request) { data, response, error in
+          if let error = error {
+              print("Post Request Error: \(error.localizedDescription)")
+              errorHandler()
+              return
+          }
+        
+        // ensure there is valid response code returned from this HTTP response
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode)
+        else {
+          print("Invalid Response received from the server")
+            errorHandler()
+          return
+        }
+        
+        // ensure there is data returned
+        guard let responseData = data else {
+            errorHandler()
+          print("nil Data received from the server")
+          return
+        }
+        
+        do {
+            let jsonResponse = try JSONSerialization.jsonObject(with: responseData)
+            print(jsonResponse)
+            let response = try JSONDecoder().decode(Response.self, from: responseData)
+            print(response.id)
+            if let failureReason = response.failureReason {
+                if failureReason.count > 10 {
+                    violateContent()
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.saveVideo(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                }
+                
+                print("VideoSaved")
+                print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                completion(response)
+            }
+            
+        } catch let error {
+          //print(error.localizedDescription)
+            errorHandler()
+            print("error: ", error)
+        }
+      }
+      task.resume()
     }
     
     //MARK: - postRequest
     func postRequestText(_ text: String, aspectRatio: String? = nil, style: String, errorHandler: @escaping () -> Void, violateContent: @escaping () -> Void, completion: @escaping (_ response: Response?) -> ()) {
-        var parameters: [String: Any] = ["prompt": style + text]
+        var parameters: [String: Any] = [
+            "prompt": style + text
+        ]
+//        if let videoStartFrame = videoStartFrame {
+//            var subParam: [String: Any] = [
+//                "type" : "image",
+//                "url" :
+//            ]
+//            parameters.updateValue(["type"], forKey: "frame0")
+//        }
         if let aspectRatio = aspectRatio {
             parameters.updateValue("aspect_ratio", forKey: aspectRatio)
         }
@@ -347,29 +664,10 @@ extension CharacterSet {
     }()
 }
 
-//Optional(682 bytes)
-//Optional(<NSHTTPURLResponse: 0x600000230920> { URL: https://api.lumalabs.ai/dream-machine/v1/generations/719d000e-2c0d-4348-ab8c-17fd58931691 } { Status Code: 200, Headers {
-//    "Content-Length" =     (
-//        682
-//    );
-//    "Content-Type" =     (
-//        "application/json"
-//    );
-//    Date =     (
-//        "Thu, 26 Dec 2024 08:50:51 GMT"
-//    );
-//    Server =     (
-//        uvicorn
-//    );
-//} })
-//["id": 719d000e-2c0d-4348-ab8c-17fd58931691, "state": completed, "created_at": 2024-12-26T08:36:58.236000Z, "failure_reason": <null>, "assets": {
-//    image = "https://storage.cdn-luma.com/dream_machine/13845236-1e63-4b22-a3d0-dbad32c8996d/baa866f0-3f1d-4831-a9ba-a9e9c40b2626_video_0_thumb.jpg";
-//    video = "https://storage.cdn-luma.com/dream_machine/13845236-1e63-4b22-a3d0-dbad32c8996d/458e0d4c-c1ba-4963-a115-2263ed6f9406_video0b7c5d7b7a8fa4339a8a0a6e81b03717e.mp4";
-//}, "model": ray-1-6, "generation_type": video, "request": {
-//    "aspect_ratio" = "16:9";
-//    "callback_url" = "<null>";
-//    "generation_type" = video;
-//    keyframes = "<null>";
-//    loop = 0;
-//    prompt = "an old lady laughing underwater, wearing a scuba diving suit";
-//}]
+private extension Data {
+    mutating func append(_ string: String) {
+        if let data = string.data(using: .utf8) {
+            append(data)
+        }
+    }
+}

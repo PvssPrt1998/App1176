@@ -33,24 +33,28 @@ struct VideoImageGenerator: View {
                                 
                             textEditorCustom
                                 .padding(.top, 20)
-    //                        HStack(spacing: 24) {
-    //                            startFrame
-    //                            endFrame
-    //                        }
-    //                        .padding(.top, 15)
+                            HStack(spacing: 24) {
+                                startFrame
+                                endFrame
+                            }
+                            .padding(.top, 15)
                             
                             Button {
+                                source.videoEndFrame = nil
+                                source.videoStartFrame = nil
                                 if startFrameImage == nil && endFrameImage == nil {
                                     source.videoGenerationText = text
                                 } else if startFrameImage != nil && endFrameImage == nil {
+                                    print("Start frame")
+                                    source.videoGenerationText = text
                                     source.videoStartFrame = startFrameImage
-                                    if let imageData = source.videoStartFrame {
-                                        source.requestUrlByImage(imageData)
-                                    }
                                 } else if startFrameImage == nil && endFrameImage != nil {
-                                    
+                                    source.videoGenerationText = text
+                                    source.videoEndFrame = endFrameImage
                                 } else {
-                                    
+                                    source.videoGenerationText = text
+                                    source.videoEndFrame = endFrameImage
+                                    source.videoStartFrame = startFrameImage
                                 }
                                 screen = .videoResult
                             } label: {
