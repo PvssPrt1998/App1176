@@ -20,6 +20,11 @@ final class Source: ObservableObject {//luma-82fc55d1-8727-426e-9a43-823f8e25583
     var videoStartFrame: Data?
     var videoEndFrame: Data?
     
+    var mergeStartFrame: Data?
+    var mergeEndFrame: Data?
+    var mergeVideo: Video?
+    var isMerge = false
+    
     var randomPromtValue: Int = Int.random(in: 0..<5)
     var promtByText: (String,String,String) { //image, url, videoId
         switch randomPromtValue {
@@ -119,10 +124,192 @@ final class Source: ObservableObject {//luma-82fc55d1-8727-426e-9a43-823f8e25583
         task.resume()
     }
     
+    //MARK: - MERGE End frame and video
+    func mergeEndFrameAndVideo(urlStr: String, completion: @escaping (_ response: Response?) -> Void, errorHandler: @escaping () -> Void) {
+        guard let video = mergeVideo else { return }
+        let parameters: [String: Any] = [
+            "prompt": video.promt,
+            "keyframes" : [
+                "frame0" : [
+                    "type" : "generation",
+                    "id" : video.id
+                ],
+                "frame1" : [
+                    "type" : "image",
+                    "url" : urlStr
+                ]
+            ]
+        ]
+        
+        guard let url =  URL(string: API.url) else { return }
+
+        let session = URLSession.shared
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type") // change as per server requirements
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        request.addValue("Keep-Alive", forHTTPHeaderField: "connection")
+        request.addValue("Bearer " + API.key, forHTTPHeaderField: "authorization")
+      do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted)
+          print("***************")
+          print(request.httpBody)
+      } catch let error {
+        print(error.localizedDescription)
+        return
+      }
+      // create dataTask using the session object to send data to the server
+      let task = session.dataTask(with: request) { data, response, error in
+          if let error = error {
+              print("Post Request Error: \(error.localizedDescription)")
+              errorHandler()
+              return
+          }
+        
+        // ensure there is valid response code returned from this HTTP response
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode)
+        else {
+          print("Invalid Response received from the server")
+            errorHandler()
+          return
+        }
+        
+        // ensure there is data returned
+        guard let responseData = data else {
+            errorHandler()
+          print("nil Data received from the server")
+          return
+        }
+        
+        do {
+            print("START ENCODE TO RESPONSE")
+            let response = try JSONDecoder().decode(Response.self, from: responseData)
+            print(response.id)
+            if let failureReason = response.failureReason {
+                if failureReason.count > 10 {
+                    errorHandler()
+                }
+            } else {
+                
+                if let id = response.id, let promt = response.request.prompt, let createdAt = response.createdAt {
+                    DispatchQueue.main.async {
+                        self.saveVideo(Video(id: id, promt: promt, previewImageUrl: "", createdAt: createdAt))
+                    }
+                    print("VideoSaved")
+                    //print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                    completion(response)
+                } else {
+                    errorHandler()
+                }
+            }
+            
+        } catch let error {
+          //print(error.localizedDescription)
+            errorHandler()
+            print("error: ", error)
+        }
+      }
+      task.resume()
+    }
+    
+    //MARK: - MERGE frame and video
+    func mergeStartFrameAndVideo(urlStr: String, completion: @escaping (_ response: Response?) -> Void, errorHandler: @escaping () -> Void) {
+        guard let video = mergeVideo else { return }
+        let parameters: [String: Any] = [
+            "prompt": video.promt,
+            "keyframes" : [
+                "frame0" : [
+                    "type" : "image",
+                    "url" : urlStr
+                ],
+                "frame1" : [
+                    "type" : "generation",
+                    "id" : video.id
+                ]
+            ]
+        ]
+        
+        guard let url =  URL(string: API.url) else { return }
+
+        let session = URLSession.shared
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type") // change as per server requirements
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        request.addValue("Keep-Alive", forHTTPHeaderField: "connection")
+        request.addValue("Bearer " + API.key, forHTTPHeaderField: "authorization")
+      do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted)
+          print("***************")
+          print(request.httpBody)
+      } catch let error {
+        print(error.localizedDescription)
+        return
+      }
+      // create dataTask using the session object to send data to the server
+      let task = session.dataTask(with: request) { data, response, error in
+          if let error = error {
+              print("Post Request Error: \(error.localizedDescription)")
+              errorHandler()
+              return
+          }
+        
+        // ensure there is valid response code returned from this HTTP response
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode)
+        else {
+          print("Invalid Response received from the server")
+            errorHandler()
+          return
+        }
+        
+        // ensure there is data returned
+        guard let responseData = data else {
+            errorHandler()
+          print("nil Data received from the server")
+          return
+        }
+        
+        do {
+            print("START ENCODE TO RESPONSE")
+            let response = try JSONDecoder().decode(Response.self, from: responseData)
+            print(response.id)
+            if let failureReason = response.failureReason {
+                if failureReason.count > 10 {
+                    errorHandler()
+                }
+            } else {
+                
+                if let id = response.id, let promt = response.request.prompt, let createdAt = response.createdAt {
+                    DispatchQueue.main.async {
+                        self.saveVideo(Video(id: id, promt: promt, previewImageUrl: "", createdAt: createdAt))
+                    }
+                    print("VideoSaved")
+                    //print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                    completion(response)
+                } else {
+                    errorHandler()
+                }
+            }
+            
+        } catch let error {
+          //print(error.localizedDescription)
+            errorHandler()
+            print("error: ", error)
+        }
+      }
+      task.resume()
+    }
+    
     func save(image: UIImage) -> String? {
         let fileName = UUID().uuidString + ".jpg"
         let fileURL = documentsUrl.appendingPathComponent(fileName)
-        if let imageData = image.jpegData(compressionQuality: 1.0) {
+        if let imageData = image.jpegData(compressionQuality: 0.5) {
            try? imageData.write(to: fileURL, options: .atomic)
             return fileURL.path // ----> Save fileName
         }
@@ -185,9 +372,9 @@ final class Source: ObservableObject {//luma-82fc55d1-8727-426e-9a43-823f8e25583
               print(responseData)
               print(json)
               completion(jsonResponse)
-              if let image = jsonResponse.assets?.image {
+              if let image = jsonResponse.assets?.image, let id = jsonResponse.id {
                   DispatchQueue.main.async {
-                      self.addPreviewImageLinkToVideo(jsonResponse.id, url: image)
+                      self.addPreviewImageLinkToVideo(id, url: image)
                   }
               }
               
@@ -208,190 +395,23 @@ final class Source: ObservableObject {//luma-82fc55d1-8727-426e-9a43-823f8e25583
     
     //MARK: - postRequest startFrame and endFrame and text
     func postRequestTextWithEndFrameAndStartFrame(_ text: String, urlStr: String, urlStr1: String, aspectRatio: String? = nil, style: String, errorHandler: @escaping () -> Void, violateContent: @escaping () -> Void, completion: @escaping (_ response: Response?) -> ()) {
-        var parameters: [String: Any] = [
-            "prompt": style + text
-        ]
-        let subParam: [String: Any] = [
-            "type" : "image",
-            "url" : urlStr
-        ]
-        parameters.updateValue(subParam, forKey: "frame0")
-        let subParam1: [String: Any] = [
-            "type" : "image",
-            "url" : urlStr1
-        ]
-        parameters.updateValue(subParam1, forKey: "frame1")
+        print("Post request endFrame")
         
-        if let aspectRatio = aspectRatio {
-            parameters.updateValue("aspect_ratio", forKey: aspectRatio)
-        }
-        guard let url =  URL(string: API.url) else { return }
-
-        let session = URLSession.shared
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type") // change as per server requirements
-        request.addValue("application/json", forHTTPHeaderField: "Accept")
-        request.addValue("Bearer " + API.key, forHTTPHeaderField: "authorization")
-      do {
-        request.httpBody = try JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted)
-      } catch let error {
-        print(error.localizedDescription)
-        return
-      }
-      // create dataTask using the session object to send data to the server
-      let task = session.dataTask(with: request) { data, response, error in
-          if let error = error {
-              print("Post Request Error: \(error.localizedDescription)")
-              errorHandler()
-              return
-          }
-        
-        // ensure there is valid response code returned from this HTTP response
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode)
-        else {
-          print("Invalid Response received from the server")
-            errorHandler()
-          return
-        }
-        
-        // ensure there is data returned
-        guard let responseData = data else {
-            errorHandler()
-          print("nil Data received from the server")
-          return
-        }
-        
-        do {
-            let jsonResponse = try JSONSerialization.jsonObject(with: responseData)
-            print(jsonResponse)
-            let response = try JSONDecoder().decode(Response.self, from: responseData)
-            print(response.id)
-            if let failureReason = response.failureReason {
-                if failureReason.count > 10 {
-                    violateContent()
-                }
-            } else {
-                DispatchQueue.main.async {
-                    self.saveVideo(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
-                }
-                
-                print("VideoSaved")
-                print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
-                completion(response)
-            }
-            
-        } catch let error {
-          //print(error.localizedDescription)
-            errorHandler()
-            print("error: ", error)
-        }
-      }
-      task.resume()
-    }
-    
-    //MARK: - postRequest endFrame and text
-    func postRequestTextWithEndFrame(_ text: String, urlStr: String, aspectRatio: String? = nil, style: String, errorHandler: @escaping () -> Void, violateContent: @escaping () -> Void, completion: @escaping (_ response: Response?) -> ()) {
-        var parameters: [String: Any] = [
-            "prompt": style + text
-        ]
-        if let videoStartFrame = videoStartFrame {
-            let subParam: [String: Any] = [
-                "type" : "image",
-                "url" : urlStr
-            ]
-            parameters.updateValue(subParam, forKey: "frame1")
-        }
-        if let aspectRatio = aspectRatio {
-            parameters.updateValue("aspect_ratio", forKey: aspectRatio)
-        }
-        guard let url =  URL(string: API.url) else { return }
-
-        let session = URLSession.shared
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type") // change as per server requirements
-        request.addValue("application/json", forHTTPHeaderField: "Accept")
-        request.addValue("Bearer " + API.key, forHTTPHeaderField: "authorization")
-      do {
-        request.httpBody = try JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted)
-      } catch let error {
-        print(error.localizedDescription)
-        return
-      }
-      // create dataTask using the session object to send data to the server
-      let task = session.dataTask(with: request) { data, response, error in
-          if let error = error {
-              print("Post Request Error: \(error.localizedDescription)")
-              errorHandler()
-              return
-          }
-        
-        // ensure there is valid response code returned from this HTTP response
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode)
-        else {
-          print("Invalid Response received from the server")
-            errorHandler()
-          return
-        }
-        
-        // ensure there is data returned
-        guard let responseData = data else {
-            errorHandler()
-          print("nil Data received from the server")
-          return
-        }
-        
-        do {
-            let jsonResponse = try JSONSerialization.jsonObject(with: responseData)
-            print(jsonResponse)
-            let response = try JSONDecoder().decode(Response.self, from: responseData)
-            print(response.id)
-            if let failureReason = response.failureReason {
-                if failureReason.count > 10 {
-                    violateContent()
-                }
-            } else {
-                DispatchQueue.main.async {
-                    self.saveVideo(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
-                }
-                
-                print("VideoSaved")
-                print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
-                completion(response)
-            }
-            
-        } catch let error {
-          //print(error.localizedDescription)
-            errorHandler()
-            print("error: ", error)
-        }
-      }
-      task.resume()
-    }
-    
-    //MARK: - postRequest startImage and text
-    func postRequestTextWithStartFrame(_ text: String, urlStr: String, aspectRatio: String? = nil, style: String, errorHandler: @escaping () -> Void, violateContent: @escaping () -> Void, completion: @escaping (_ response: Response?) -> ()) {
-        print("Post request startFrame")
-        var parameters: [String: Any] = [
+        let parameters: [String: Any] = [
             "prompt": style + text,
-            "frame0" : [
-                "type" : "image",
-                "url" : urlStr
-            ]
+            "keyframes" : [
+                "frame0" : [
+                    "type" : "image",
+                    "url" : urlStr
+                ],
+                "frame1" : [
+                    "type" : "image",
+                    "url" : urlStr1
+                ]
+            ],
+            "aspectRatio" : aspectRatio ?? "16:9"
         ]
         
-        if let aspectRatio = aspectRatio {
-            parameters.updateValue("aspect_ratio", forKey: aspectRatio)
-        }
-        
-        print(parameters)
         guard let url =  URL(string: API.url) else { return }
 
         let session = URLSession.shared
@@ -436,8 +456,7 @@ final class Source: ObservableObject {//luma-82fc55d1-8727-426e-9a43-823f8e25583
         }
         
         do {
-            let jsonResponse = try JSONSerialization.jsonObject(with: responseData)
-            print(jsonResponse)
+            print("START ENCODE TO RESPONSE")
             let response = try JSONDecoder().decode(Response.self, from: responseData)
             print(response.id)
             if let failureReason = response.failureReason {
@@ -445,13 +464,201 @@ final class Source: ObservableObject {//luma-82fc55d1-8727-426e-9a43-823f8e25583
                     violateContent()
                 }
             } else {
-                DispatchQueue.main.async {
-                    self.saveVideo(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
-                }
                 
-                print("VideoSaved")
-                print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
-                completion(response)
+                if let id = response.id, let promt = response.request.prompt, let createdAt = response.createdAt {
+                    DispatchQueue.main.async {
+                        self.saveVideo(Video(id: id, promt: promt, previewImageUrl: "", createdAt: createdAt))
+                    }
+                    print("VideoSaved")
+                    //print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                    completion(response)
+                } else {
+                    errorHandler()
+                }
+            }
+            
+        } catch let error {
+          //print(error.localizedDescription)
+            errorHandler()
+            print("error: ", error)
+        }
+      }
+      task.resume()
+    }
+    
+    //MARK: - postRequest endFrame and text
+    func postRequestTextWithEndFrame(_ text: String, urlStr: String, aspectRatio: String? = nil, style: String, errorHandler: @escaping () -> Void, violateContent: @escaping () -> Void, completion: @escaping (_ response: Response?) -> ()) {
+        
+        print("Post request endFrame")
+        
+        let parameters: [String: Any] = [
+            "prompt": style + text,
+            "keyframes" : [
+                "frame1" : [
+                    "type" : "image",
+                    "url" : urlStr
+                ]
+            ],
+            "aspectRatio" : aspectRatio ?? "16:9"
+        ]
+        
+        guard let url =  URL(string: API.url) else { return }
+
+        let session = URLSession.shared
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type") // change as per server requirements
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        request.addValue("Keep-Alive", forHTTPHeaderField: "connection")
+        request.addValue("Bearer " + API.key, forHTTPHeaderField: "authorization")
+      do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted)
+          print("***************")
+          print(request.httpBody)
+      } catch let error {
+        print(error.localizedDescription)
+        return
+      }
+      // create dataTask using the session object to send data to the server
+      let task = session.dataTask(with: request) { data, response, error in
+          if let error = error {
+              print("Post Request Error: \(error.localizedDescription)")
+              errorHandler()
+              return
+          }
+        
+        // ensure there is valid response code returned from this HTTP response
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode)
+        else {
+          print("Invalid Response received from the server")
+            errorHandler()
+          return
+        }
+        
+        // ensure there is data returned
+        guard let responseData = data else {
+            errorHandler()
+          print("nil Data received from the server")
+          return
+        }
+        
+        do {
+            print("START ENCODE TO RESPONSE")
+            let response = try JSONDecoder().decode(Response.self, from: responseData)
+            print(response.id)
+            if let failureReason = response.failureReason {
+                if failureReason.count > 10 {
+                    violateContent()
+                }
+            } else {
+                if let id = response.id, let promt = response.request.prompt, let createdAt = response.createdAt {
+                    DispatchQueue.main.async {
+                        self.saveVideo(Video(id: id, promt: promt, previewImageUrl: "", createdAt: createdAt))
+                    }
+                    print("VideoSaved")
+                    //print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                    completion(response)
+                } else {
+                    errorHandler()
+                }
+            }
+            
+        } catch let error {
+          //print(error.localizedDescription)
+            errorHandler()
+            print("error: ", error)
+        }
+      }
+      task.resume()
+    }
+    
+    //MARK: - postRequest startImage and text
+    func postRequestTextWithStartFrame(_ text: String, urlStr: String, aspectRatio: String? = nil, style: String, errorHandler: @escaping () -> Void, violateContent: @escaping () -> Void, completion: @escaping (_ response: Response?) -> ()) {
+        print("Post request startFrame")
+        
+        let parametersModel = RequestWithFrames(promt: style + text, aspectRatio: aspectRatio, keyframes: KeyframesRequest(frame0: Frame0Request(type: "image", url: urlStr), frame1: nil))
+        
+        guard let parameters = try? JSONEncoder().encode(parametersModel) else {
+            errorHandler()
+            return
+        }
+        
+        let parameters1: [String: Any] = [
+            "prompt": style + text,
+            "keyframes" : [
+                "frame0" : [
+                    "type" : "image",
+                    "url" : urlStr
+                ]
+            ],
+            "aspectRatio" : aspectRatio ?? "16:9"
+        ]
+        
+        guard let url =  URL(string: API.url) else { return }
+
+        let session = URLSession.shared
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type") // change as per server requirements
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        request.addValue("Keep-Alive", forHTTPHeaderField: "connection")
+        request.addValue("Bearer " + API.key, forHTTPHeaderField: "authorization")
+      do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters1, options: .prettyPrinted)
+          print("***************")
+          print(request.httpBody)
+      } catch let error {
+        print(error.localizedDescription)
+        return
+      }
+      // create dataTask using the session object to send data to the server
+      let task = session.dataTask(with: request) { data, response, error in
+          if let error = error {
+              print("Post Request Error: \(error.localizedDescription)")
+              errorHandler()
+              return
+          }
+        
+        // ensure there is valid response code returned from this HTTP response
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode)
+        else {
+          print("Invalid Response received from the server")
+            errorHandler()
+          return
+        }
+        
+        // ensure there is data returned
+        guard let responseData = data else {
+            errorHandler()
+          print("nil Data received from the server")
+          return
+        }
+        
+        do {
+            print("START ENCODE TO RESPONSE")
+            let response = try JSONDecoder().decode(Response.self, from: responseData)
+            print(response.id)
+            if let failureReason = response.failureReason {
+                if failureReason.count > 10 {
+                    violateContent()
+                }
+            } else {
+                if let id = response.id, let promt = response.request.prompt, let createdAt = response.createdAt {
+                    DispatchQueue.main.async {
+                        self.saveVideo(Video(id: id, promt: promt, previewImageUrl: "", createdAt: createdAt))
+                    }
+                    print("VideoSaved")
+                    //print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                    completion(response)
+                } else {
+                    errorHandler()
+                }
             }
             
         } catch let error {
@@ -468,13 +675,7 @@ final class Source: ObservableObject {//luma-82fc55d1-8727-426e-9a43-823f8e25583
         var parameters: [String: Any] = [
             "prompt": style + text
         ]
-//        if let videoStartFrame = videoStartFrame {
-//            var subParam: [String: Any] = [
-//                "type" : "image",
-//                "url" :
-//            ]
-//            parameters.updateValue(["type"], forKey: "frame0")
-//        }
+        
         if let aspectRatio = aspectRatio {
             parameters.updateValue("aspect_ratio", forKey: aspectRatio)
         }
@@ -528,13 +729,16 @@ final class Source: ObservableObject {//luma-82fc55d1-8727-426e-9a43-823f8e25583
                     violateContent()
                 }
             } else {
-                DispatchQueue.main.async {
-                    self.saveVideo(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                if let id = response.id, let promt = response.request.prompt, let createdAt = response.createdAt {
+                    DispatchQueue.main.async {
+                        self.saveVideo(Video(id: id, promt: promt, previewImageUrl: "", createdAt: createdAt))
+                    }
+                    print("VideoSaved")
+                    //print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
+                    completion(response)
+                } else {
+                    errorHandler()
                 }
-                
-                print("VideoSaved")
-                print(Video(id: response.id, promt: response.request.prompt, previewImageUrl: "", createdAt: response.createdAt))
-                completion(response)
             }
             
         } catch let error {

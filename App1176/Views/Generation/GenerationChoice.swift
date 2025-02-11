@@ -86,24 +86,24 @@ struct GenerationChoice: View {
                             )
                             .padding(.top, 20)
                         
-//                        Button {
-//                            
-//                        } label: {
-//                            HStack {
-//                                Image(systemName: "wand.and.stars.inverse")
-//                                    .font(.system(size: 15, weight: .regular))
-//                                    .foregroundColor(.white)
-//                                
-//                                Text("Generate")
-//                                    .font(.system(size: 15, weight: .regular))
-//                                    .foregroundColor(.white)
-//                            }
-//                            .frame(maxWidth: .infinity)
-//                            .frame(height: 34)
-//                            .background(Color.c2547413)
-//                            .clipShape(.rect(cornerRadius: 40))
-//                        }
-//                        .padding(.top, 5)
+                        Button {
+                            screen = .videoMerge
+                        } label: {
+                            HStack {
+                                Image(systemName: "wand.and.stars.inverse")
+                                    .font(.system(size: 15, weight: .regular))
+                                    .foregroundColor(.white)
+                                
+                                Text("Generate")
+                                    .font(.system(size: 15, weight: .regular))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 34)
+                            .background(Color.c2547413)
+                            .clipShape(.rect(cornerRadius: 40))
+                        }
+                        .padding(.top, 5)
                     }
                     .padding(.horizontal, 32)
                     .padding(.bottom, 16)

@@ -13,6 +13,7 @@ enum TabScreen {
     case videoImageGenerator
     case videoResult
     case promtResult
+    case videoMerge
 }
 
 enum LoadingState {

@@ -8,6 +8,10 @@ struct Tab: View {
     @Binding var screen: Screen
     
     init(screen: Binding<Screen>) {
+        UISegmentedControl.appearance().selectedSegmentTintColor = .white
+        UISegmentedControl.appearance().backgroundColor = UIColor.black
+        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.black], for: .selected)
+        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.white], for: .normal)
         self._screen = screen
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
@@ -37,7 +41,7 @@ struct Tab: View {
                     .tabItem { VStack {
                         tabViewImage("bookmark")
                         Text("Generation history").font(.system(size: 10, weight: .medium))
-                    } }
+                    }}
                     .tag(1)
                 SettingsView(screen: $screen)
                     .tabItem {
@@ -61,6 +65,8 @@ struct Tab: View {
             GenerationResult(screen: $tabScreen)
         case .promtResult:
             PromtGenerationView(screen: $tabScreen)
+        case .videoMerge:
+            MergeVideoAndImageView(screen: $tabScreen)
         }
     }
     

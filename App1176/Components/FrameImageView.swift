@@ -12,14 +12,12 @@ struct FrameImageView: View {
     var body: some View {
         ZStack {
             if let image = image {
-                ZStack {
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .clipped()
-                }
-                .frame(maxWidth: .infinity)
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: (UIScreen.main.bounds.width - 87) / 2)
                 .frame(height: 167)
+                .clipped()
                 .background(Color.c343434)
                 .clipShape(.rect(cornerRadius: 10))
                 .overlay(

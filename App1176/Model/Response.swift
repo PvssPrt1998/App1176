@@ -7,9 +7,9 @@ import Foundation
 
 // MARK: - Response
 struct Response: Codable {
-    let id, state: String
+    let id, state: String?
     let failureReason: String?
-    let createdAt: String
+    let createdAt: String?
     let assets: Assets?
     let version: String?
     let request: Request
@@ -30,8 +30,8 @@ struct Assets: Codable {
 
 // MARK: - Request
 struct Request: Codable {
-    let prompt, aspectRatio: String
-    let loop: Bool
+    let prompt, aspectRatio: String?
+    let loop: Bool?
     let keyframes: Keyframes?
 
     enum CodingKeys: String, CodingKey {
@@ -43,17 +43,17 @@ struct Request: Codable {
 
 // MARK: - Keyframes
 struct Keyframes: Codable {
-    let frame0: Frame0
-    let frame1: Frame1
+    let frame0: Frame0?
+    let frame1: Frame1?
 }
 
 // MARK: - Frame0
 struct Frame0: Codable {
-    let type: String
-    let url: String
+    let type: String?
+    let url: String?
 }
 
 // MARK: - Frame1
 struct Frame1: Codable {
-    let type, id: String
+    let type, id: String?
 }

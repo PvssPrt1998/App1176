@@ -1,14 +1,19 @@
 import SwiftUI
 
-struct VideoImageGenerator: View {
+struct MergeVideoAndImageView: View {
     @EnvironmentObject var source: Source
     
     @Binding var screen: TabScreen
-    @State var text = ""
     @State var startFrameImage: Data?
     @State var endFrameImage: Data?
     @State var aspectRatio: String = "16:9"
     @State var buttonText = "Styles"
+    
+    @State var selection = 0
+    
+    @State var uiImage: UIImage?
+    
+    @State var showVideoChoice = false
     
     var body: some View {
         NavigationView {
@@ -25,37 +30,35 @@ struct VideoImageGenerator: View {
                     
                     ScrollView(.vertical) {
                         VStack(spacing: 0) {
-                            Text("Video Image Generator")
+                            Text("AI Hug Video Generator")
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.top, 28)
-                                
-                            textEditorCustom
-                                .padding(.top, 20)
-                            HStack(spacing: 24) {
+                            
+                            VStack(spacing: 8) {
                                 startFrame
-                                endFrame
+                                Picker("", selection: $selection) {
+                                    Text("Start frame").tag(0)
+                                    Text("End frame").tag(1)
+                                }
+                                .pickerStyle(.segmented)
+                                .labelsHidden()
                             }
-                            .padding(.top, 15)
+                            .padding(.top, 20)
+                            
+                            textEditorCustom
+                                .padding(.top, 15)
                             
                             Button {
-                                source.isMerge = false
-                                source.videoEndFrame = nil
-                                source.videoStartFrame = nil
-                                if startFrameImage == nil && endFrameImage == nil {
-                                    source.videoGenerationText = text
-                                } else if startFrameImage != nil && endFrameImage == nil {
+                                source.isMerge = true
+                                source.mergeStartFrame = nil
+                                source.mergeEndFrame = nil
+                                if startFrameImage != nil && selection == 0 {
                                     print("Start frame")
-                                    source.videoGenerationText = text
-                                    source.videoStartFrame = startFrameImage
-                                } else if startFrameImage == nil && endFrameImage != nil {
-                                    source.videoGenerationText = text
-                                    source.videoEndFrame = endFrameImage
-                                } else {
-                                    source.videoGenerationText = text
-                                    source.videoEndFrame = endFrameImage
-                                    source.videoStartFrame = startFrameImage
+                                    source.mergeStartFrame = startFrameImage
+                                } else if startFrameImage != nil && selection == 1 {
+                                    source.mergeEndFrame = startFrameImage
                                 }
                                 screen = .videoResult
                             } label: {
@@ -68,8 +71,8 @@ struct VideoImageGenerator: View {
                                         .font(.system(size: 15, weight: .regular))
                                         .foregroundColor(.white)
                                 }
-                                .disabled(text == "")
-                                .opacity(text == "" ? 0.5 : 1)
+                                .disabled(source.mergeVideo == nil && startFrameImage == nil)
+                                .opacity(source.mergeVideo == nil && startFrameImage == nil ? 0.5 : 1)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 34)
                                 .background(Color.c2547413)
@@ -77,13 +80,13 @@ struct VideoImageGenerator: View {
                             }
                             .padding(.top, 15)
 //                            Button {
-//                                
+//
 //                            } label: {
 //                                HStack {
 //                                    Image(systemName: "arrowtriangle.down.fill")
 //                                        .font(.system(size: 15, weight: .regular))
 //                                        .foregroundColor(.white)
-//                                    
+//
 //                                    Text("16:9")
 //                                        .font(.system(size: 15, weight: .regular))
 //                                        .foregroundColor(.white)
@@ -143,7 +146,6 @@ struct VideoImageGenerator: View {
                                         source.aspectRatio = "1:1"
                                         aspectRatio = "1:1"
                                     }
-                                
                             }
                             .padding(.top, 15)
                             
@@ -221,34 +223,38 @@ struct VideoImageGenerator: View {
                 .frame(maxHeight: .infinity, alignment: .top)
             }
         }
+        .sheet(isPresented: $showVideoChoice) {
+            VideoChoice(show: $showVideoChoice) {
+                guard let urlString = source.mergeVideo?.previewImageUrl, let url = URL(string: urlString) else { return }
+                let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                    guard let data = data else { return }
+                    DispatchQueue.main.async {
+                        self.uiImage = UIImage(data: data)
+                    }
+                }
+                task.resume()
+            }
+        }
     }
     
     @ViewBuilder private var textEditorCustom: some View {
-        if #available(iOS 16.0, *) {
-            TextEditor(text: $text)
-                .font(.system(size: 17, weight: .regular))
-                .foregroundColor(.white)
-                .scrollContentBackground(.hidden)
-                .padding(EdgeInsets(top: 7, leading: 11, bottom: 7, trailing: 11))
-                .background(
-                    placeholderView(isShow: text == "")
-                )
-                .padding(0)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.c2547413, lineWidth: 2)
-                )
-                .background(Color.c343434)
-                .clipShape(.rect(cornerRadius: 9))
+        if let uiImage = uiImage {
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
                 .frame(height: 167)
+                .clipped()
+                .clipShape(.rect(cornerRadius: 9))
+                .onTapGesture {
+                    showVideoChoice = true
+                }
         } else {
-            TextEditor(text: $text)
-                .font(.system(size: 17, weight: .regular))
+            Text("Video merge")
+                .font(.system(size: 17, weight: .bold))
                 .foregroundColor(.white)
                 .padding(EdgeInsets(top: 7, leading: 11, bottom: 7, trailing: 11))
-                .background(
-                    placeholderView(isShow: text == "")
-                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color.c2547413, lineWidth: 2)
@@ -256,6 +262,9 @@ struct VideoImageGenerator: View {
                 .background(Color.c343434)
                 .clipShape(.rect(cornerRadius: 9))
                 .frame(height: 167)
+                .onTapGesture {
+                    showVideoChoice = true
+                }
         }
     }
     
@@ -271,7 +280,7 @@ struct VideoImageGenerator: View {
     }
     
     private var startFrame: some View {
-        FrameImageView(emptyText: "Start frame", imageData: $startFrameImage)
+        FrameImageView(emptyText: "", imageData: $startFrameImage)
     }
     
     private var endFrame: some View {
@@ -287,12 +296,12 @@ struct VideoImageGenerator: View {
     }
 }
 
-struct VideoImageGenerator_Preview: PreviewProvider {
+struct MergeVideoAndImageView_Preview: PreviewProvider {
     
     @State static var screen: TabScreen = .videoImageGenerator
     
     static var previews: some View {
-        VideoImageGenerator(screen: $screen)
+        MergeVideoAndImageView(screen: $screen)
             .environmentObject(Source())
     }
 }

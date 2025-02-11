@@ -137,8 +137,63 @@ struct GenerationResult: View {
             if !source.requestInProgress {
                 source.requestInProgress = true
                 //mockRequest()
-                request()
+                if source.isMerge {
+                    mergeRequest()
+                } else {
+                    request()
+                }
             }
+        }
+    }
+    
+    private func mergeRequest() {
+        if source.mergeStartFrame == nil {
+            endFrameMergeRequest()
+        } else {
+            startFrameMergeRequest()
+        }
+    }
+    
+    private func endFrameMergeRequest() {
+        source.imageToUrl(imageData: source.mergeStartFrame) { url in
+            
+            source.mergeEndFrameAndVideo(urlStr: url.absoluteString) { response in
+                if let response = response, let id = response.id {
+                    print("*****")
+                    print("Response by id")
+                    videoById(id)
+                } else {
+                    print("postRequest completion error cannot get response")
+                    loadingState = .noConnection
+                }
+            } errorHandler: {
+                loadingState = .noConnection
+            }
+
+        } errorHandler: {
+            loadingState = .noConnection
+        }
+    }
+    
+    private func startFrameMergeRequest() {
+        print("StartFrameRequest in view")
+        source.imageToUrl(imageData: source.mergeStartFrame) { url in
+            
+            source.mergeStartFrameAndVideo(urlStr: url.absoluteString) { response in
+                if let response = response, let id = response.id {
+                    print("*****")
+                    print("Response by id")
+                    videoById(id)
+                } else {
+                    print("postRequest completion error cannot get response")
+                    loadingState = .noConnection
+                }
+            } errorHandler: {
+                loadingState = .noConnection
+            }
+
+        } errorHandler: {
+            loadingState = .noConnection
         }
     }
     
@@ -162,10 +217,10 @@ struct GenerationResult: View {
             } violateContent: {
                 loadingState = .noConnection
             } completion: { response in
-                if let response = response {
+                if let response = response, let id = response.id {
                     print("*****")
                     print("Response by id")
-                    videoById(response.id)
+                    videoById(id)
                 } else {
                     print("postRequest completion error cannot get response")
                     loadingState = .noConnection
@@ -184,10 +239,10 @@ struct GenerationResult: View {
             } violateContent: {
                 loadingState = .noConnection
             } completion: { response in
-                if let response = response {
+                if let response = response, let id = response.id {
                     print("*****")
                     print("Response by id")
-                    videoById(response.id)
+                    videoById(id)
                 } else {
                     print("postRequest completion error cannot get response")
                     loadingState = .noConnection
@@ -207,10 +262,10 @@ struct GenerationResult: View {
                     loadingState = .noConnection
                 } completion: { response in
                     print("CompletionRequest")
-                    if let response = response {
+                    if let response = response, let id = response.id {
                         print("*****")
                         print("Response by id")
-                        videoById(response.id)
+                        videoById(id)
                     } else {
                         print("postRequest completion error cannot get response")
                         loadingState = .noConnection
@@ -233,10 +288,10 @@ struct GenerationResult: View {
             loadingState = .violateContent
         } completion: { response in
             print("CompletionRequest")
-            if let response = response {
+            if let response = response, let id = response.id {
                 print("*****")
                 print("Response by id")
-                videoById(response.id)
+                videoById(id)
             } else {
                 print("postRequest completion error cannot get response")
                 loadingState = .noConnection
